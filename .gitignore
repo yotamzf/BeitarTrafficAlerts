@@ -1,0 +1,15 @@
+# סודות וסביבה
+.env
+.env.local
+*.local
+
+# פלטי ייצוא גולמיים של n8n (עלולים להכיל chatId/מייל/טוקנים — לא לדחוף!)
+**/credentials*.json
+**/*.raw.json
+export/
+
+# מערכת
+.DS_Store
+Thumbs.db
+node_modules/
+*.log

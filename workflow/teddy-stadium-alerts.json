@@ -1,0 +1,213 @@
+{
+  "name": "ביתר ירושלים — התראות תנועה לאצטדיון טדי",
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodes": [
+    {
+      "id": "21678d26-43d1-464a-a26e-bff871cc54ee",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 8 * * 0-5" },
+            { "field": "cronExpression", "expression": "30 22 * * 6" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "357005dc-3647-4fdc-8657-a8d0e724d9de",
+      "name": "Hebcal חגים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [220, 300],
+      "parameters": {
+        "url": "=https://www.hebcal.com/hebcal?cfg=json&v=1&maj=on&min=off&nx=off&mod=off&year={{ $now.year }}&month={{ $now.month }}&i=on",
+        "options": {}
+      }
+    },
+    {
+      "id": "0ff40f1f-3c90-49d1-bc1a-d14cf97bd8c0",
+      "name": "שער שבת/חג",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\nconst il = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));\nconst iso = il.getFullYear() + '-' + String(il.getMonth() + 1).padStart(2, '0') + '-' + String(il.getDate()).padStart(2, '0');\nconst items = ($input.first() && $input.first().json && $input.first().json.items) || [];\nconst holidayDates = items.filter(it => it.yomtov === true && it.date).map(it => it.date.slice(0, 10));\nif (holidayDates.includes(iso)) return [];\nreturn [{ json: { ok: true, checkedDate: iso, holidayDates } }];\n"
+      }
+    },
+    {
+      "id": "8f180ff8-1562-4ade-b036-cb24f0060389",
+      "name": "מזג אוויר",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [620, 300],
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=31.77&longitude=35.19&hourly=temperature_2m,precipitation_probability&timezone=Asia%2FJerusalem&forecast_days=14",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "ae566a6f-e1a9-4542-af6f-71dde2228d31",
+      "name": "sport5 ביתר",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [820, 120],
+      "parameters": {
+        "url": "https://www.sport5.co.il/team.aspx?FolderID=191",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            { "name": "User-Agent", "value": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1" },
+            { "name": "Accept", "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
+            { "name": "Accept-Language", "value": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7" },
+            { "name": "Cache-Control", "value": "no-cache" }
+          ]
+        },
+        "options": { "response": { "response": { "responseFormat": "text" } } }
+      }
+    },
+    {
+      "id": "4b4efec0-5cdf-4184-8995-2a6090497ecf",
+      "name": "sport5 הפועל ירושלים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [820, 300],
+      "parameters": {
+        "url": "https://www.sport5.co.il/team.aspx?FolderID=9749",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            { "name": "User-Agent", "value": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1" },
+            { "name": "Accept", "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
+            { "name": "Accept-Language", "value": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7" },
+            { "name": "Cache-Control", "value": "no-cache" }
+          ]
+        },
+        "options": { "response": { "response": { "responseFormat": "text" } } }
+      }
+    },
+    {
+      "id": "0b2c4d9e-d82f-4c4f-af0a-ad5cad9d0e76",
+      "name": "API-Football טדי",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [820, 480],
+      "parameters": {
+        "url": "=https://v3.football.api-sports.io/fixtures?venue=866&next=15&timezone=Asia/Jerusalem",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "_comment": "Requires an n8n 'Header Auth' credential with header name 'x-apisports-key' and your API-Football key as the value. Create the credential in the n8n UI — never hardcode the key here."
+    },
+    {
+      "id": "05ea6653-5be9-42c7-8932-ea5203bd5068",
+      "name": "מיזוג מקורות",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [1040, 300],
+      "parameters": { "mode": "append", "numberInputs": 3 }
+    },
+    {
+      "id": "b28dc861-61e9-4701-8577-a12a06419576",
+      "name": "חילוץ משחקי טדי",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\nfunction isTeddy(name) {\n  return name.includes('בית') || (name.includes('הפועל') && name.includes('ירושלים'));\n}\nconst strip = (t) => t.replace(/<[^>]*>?/gm, '').trim();\nfunction mapEvent(n) {\n  if (/premier/i.test(n)) return 'ליגת העל';\n  if (/cup/i.test(n)) return 'גביע המדינה';\n  if (/super/i.test(n)) return 'הסופר קאפ';\n  return n || 'משחק בטדי';\n}\nconst seen = new Set();\nconst results = [];\n\nfor (const item of $input.all()) {\n  const j = item.json || {};\n\n  // --- מקור A: API-Football (venue=866 = טדי) — כל משחק, כל הקבוצות ---\n  if (Array.isArray(j.response)) {\n    for (const f of j.response) {\n      const v = (f.fixture && f.fixture.venue && f.fixture.venue.name) || '';\n      if (!/teddy|malcha/i.test(v)) continue;\n      const iso = f.fixture && f.fixture.date; if (!iso) continue;\n      const Y = iso.slice(0, 4), M = iso.slice(5, 7), D = iso.slice(8, 10);\n      const date = D + '.' + M + '.' + Y.slice(2);\n      const time = iso.slice(11, 16);\n      const host = (f.teams && f.teams.home && f.teams.home.name) || '';\n      const guest = (f.teams && f.teams.away && f.teams.away.name) || '';\n      if (!host || !time) continue;\n      const key = date + '|' + time;\n      if (seen.has(key)) continue;\n      seen.add(key);\n      results.push({ json: { eventName: mapEvent(f.league && f.league.name), hostTeam: host, opponent: guest, date, time, day: '', source: 'apifootball' } });\n    }\n    continue;\n  }\n\n  // --- מקור B: sport5 (דפי קבוצה, HTML) — דיירות טדי בלבד ---\n  const html = j.data;\n  if (!html) continue;\n  const rows = html.match(/<tr[\\s\\S]*?<\\/tr>/gi) || [];\n  for (const row of rows) {\n    if (row.includes('<th')) continue;\n    if (row.includes('סקירה') || row.includes('class=\"link\"')) continue;\n    const cells = row.match(/<td[\\s\\S]*?<\\/td>/gi);\n    if (!cells || cells.length < 4) continue;\n    const links = cells[0].match(/<a[^>]*>(.*?)<\\/a>/gi);\n    if (!links || links.length < 2) continue;\n    const host = strip(links[0]);\n    const guest = strip(links[1]);\n    if (!isTeddy(host)) continue;\n    const time = strip(cells[2]);\n    const date = strip(cells[3]);\n    if (!date || !time) continue;\n    const key = date + '|' + time;\n    if (seen.has(key)) continue;\n    seen.add(key);\n    const isDerby = isTeddy(host) && isTeddy(guest);\n    results.push({ json: { eventName: isDerby ? 'דרבי ירושלים' : 'ליגת העל', hostTeam: host, opponent: guest, date, time, day: strip(cells[1]), source: 'sport5' } });\n  }\n}\nreturn results;\n"
+      }
+    },
+    {
+      "id": "ff921dbe-2545-4217-abcf-fd6ce0dea6ed",
+      "name": "חישוב משחקים עתידיים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\nconst now = new Date();\nconst MS_DAY = 86400000;\nconst DAYS = [\n  { n: 'ראשון', w: false }, { n: 'שני', w: false }, { n: 'שלישי', w: false },\n  { n: 'רביעי', w: false }, { n: 'חמישי', w: false }, { n: 'שישי', w: true }, { n: 'שבת', w: true }\n];\nconst TRAFFIC_START_HOURS = 3.5, SAFETY_BUFFER_MIN = 30;\nconst WALK_MIN = 15, TRAIN_MIN = 50, BUS_MIN = 30;\nconst BEFORE_MS = (TRAFFIC_START_HOURS * 60 + SAFETY_BUFFER_MIN) * 60000;\n\nlet holidaySet = new Set();\ntry { holidaySet = new Set((($('שער שבת/חג').first() || {}).json || {}).holidayDates || []); } catch (e) {}\n\nconst pad = (n) => String(n).padStart(2, '0');\nfunction parseDT(d, t) { const [D, M, Y] = d.split('.').map(Number); const [h, m] = t.split(':').map(Number); return new Date(2000 + Y, M - 1, D, h, m); }\nfunction fmt(dt) { return dt.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); }\nfunction floor30(dt) { const x = new Date(dt); x.setMinutes(x.getMinutes() >= 30 ? 30 : 0, 0, 0); return x; }\n\nconst results = [];\nfor (const item of $input.all()) {\n  const g = item.json;\n  if (!g.date || !g.time) continue;\n  const ko = parseDT(g.date, g.time);\n  if (!ko || ko < now) continue;\n  const dow = ko.getDay();\n  const di = DAYS[dow];\n  const [D, M, Y] = g.date.split('.').map(Number);\n  const gISO = (2000 + Y) + '-' + pad(M) + '-' + pad(D);\n  const isYomtov = holidaySet.has(gISO);\n  const diffDays = Math.ceil((ko - now) / MS_DAY);\n  const level = diffDays <= 1 ? 'red' : diffDays <= 4 ? 'yellow' : 'green';\n\n  const noTrain = di.w || isYomtov;\n  const mode = noTrain ? 'car' : 'train';\n  const noTrainReason = isYomtov ? 'חג' : dow === 6 ? 'שבת' : dow === 5 ? 'ערב שבת' : '';\n\n  const leaveBy = fmt(new Date(ko.getTime() - BEFORE_MS));\n  let trainTime = '', trainArrivalTime = '', arrivalTeddyTime = '', leaveWorkTime = '';\n  if (mode === 'train') {\n    const board = floor30(new Date(ko.getTime() - BEFORE_MS - (BUS_MIN + TRAIN_MIN) * 60000));\n    trainTime = fmt(board);\n    trainArrivalTime = fmt(new Date(board.getTime() + TRAIN_MIN * 60000));\n    arrivalTeddyTime = fmt(new Date(board.getTime() + (TRAIN_MIN + BUS_MIN) * 60000));\n    leaveWorkTime = fmt(new Date(board.getTime() - WALK_MIN * 60000));\n  }\n\n  results.push({ json: {\n    eventName: g.eventName || 'ליגת העל', hostTeam: g.hostTeam, opponent: g.opponent,\n    date: g.date, time: g.time, dayName: di.n, isWeekend: di.w, isYomtov,\n    level, mode, noTrainReason, leaveBy,\n    escapeTime: leaveWorkTime || leaveBy,\n    trainTime, trainArrivalTime, arrivalTeddyTime, leaveWorkTime,\n    kickoffTimestamp: ko.getTime()\n  }});\n}\nresults.sort((a, b) => a.json.kickoffTimestamp - b.json.kickoffTimestamp);\nreturn results;\n"
+      }
+    },
+    {
+      "id": "dfc5b399-bac4-49a0-8396-c1841b8d60dd",
+      "name": "נוסח הודעה",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1660, 160],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\nconst items = $input.all();\nconst now = new Date();\nconst MS_DAY = 86400000;\nconst WAZE = 'https://waze.com/ul?ll=31.7698,35.1934&navigate=yes';\nconst pad = (n) => String(n).padStart(2, '0');\nfunction weatherAt(dateStr, timeStr) {\n  try {\n    const w = (($('מזג אוויר').first() || {}).json) || {};\n    const h = w.hourly; if (!h || !h.time) return null;\n    const [D, M, Y] = dateStr.split('.').map(Number);\n    const key = (2000 + Y) + '-' + pad(M) + '-' + pad(D) + 'T' + pad(parseInt(timeStr, 10)) + ':00';\n    const idx = h.time.indexOf(key);\n    if (idx < 0) return null;\n    return { t: Math.round(h.temperature_2m[idx]), rain: h.precipitation_probability[idx] };\n  } catch (e) { return null; }\n}\nfunction weatherLine(m) {\n  const w = weatherAt(m.date, m.time);\n  if (!w) return '';\n  let s = '🌡️ ' + w.t + '°';\n  if (w.rain != null) s += '  ·  🌧️ ' + w.rain + '%' + (w.rain >= 50 ? ' (קח מטרייה)' : '');\n  return s;\n}\nif (!items.length) {\n  return [{ json: { text: '🏟️ *אצטדיון טדי — התראות תנועה*\\n────────────────\\n🟢 אין משחקים קרובים בטדי.\\nהדרך פנויה 🚗' } }];\n}\nconst L = ['🏟️ *אצטדיון טדי — התראות תנועה*'];\nfor (let i = 0; i < Math.min(items.length, 3); i++) {\n  const m = items[i].json;\n  const dd = Math.ceil((m.kickoffTimestamp - now) / MS_DAY);\n  const icon = m.level === 'red' ? '🔴' : m.level === 'yellow' ? '🟠' : '🟢';\n  const cd = dd <= 0 ? 'היום' : dd === 1 ? 'מחר' : 'בעוד ' + dd + ' ימים';\n  L.push('');\n  L.push('━━━━━━━━━━━━━━');\n  if (i === 0) {\n    L.push(icon + ' *' + m.hostTeam + ' נגד ' + m.opponent + '*');\n    L.push('📅 ' + m.dayName + ', ' + m.date + '  |  ⏰ ' + m.time);\n    L.push('🏆 ' + m.eventName + '  ·  ⏳ ' + cd);\n    const wl = weatherLine(m); if (wl) L.push(wl);\n    if (m.mode === 'car') {\n      L.push('🚆 אין רכבת (' + (m.noTrainReason || 'סופ״ש') + ')');\n      L.push('🚗 סע ברכב — צא *עד ' + m.leaveBy + '*');\n    } else {\n      const tag = m.level === 'red' ? '⚠️ *עומס כבד צפוי!*' : m.level === 'yellow' ? 'ℹ️ צפוי עומס ביום המשחק' : 'ℹ️ לתכנון מוקדם';\n      L.push(tag);\n      L.push('🚂 תפוס רכבת *' + m.trainTime + '* מתל אביב');\n      L.push('   ↳ הגעה לטדי בערך ' + m.arrivalTeddyTime + '  (יציאה מהעבודה ' + m.leaveWorkTime + ')');\n    }\n    L.push('🗺️ [ניווט לטדי ב-Waze](' + WAZE + ')');\n  } else {\n    L.push(icon + ' *' + m.date + ' ' + m.time + '* — ' + m.hostTeam + ' נגד ' + m.opponent);\n    const extra = m.mode === 'car' ? '🚗 רכב (' + (m.noTrainReason || 'סופ״ש') + ')' : '🚂 רכבת ' + m.trainTime;\n    L.push('🏆 ' + m.eventName + '  ·  ⏳ ' + cd + '  ·  ' + extra);\n  }\n}\nL.push('');\nL.push('📍 אצטדיון טדי קולק, ירושלים');\nreturn [{ json: { text: L.join('\\n') } }];\n"
+      }
+    },
+    {
+      "id": "835d5d22-de3f-4386-b87a-ea9af6f31a1b",
+      "name": "Send a text message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1880, 160],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.text }}",
+        "additionalFields": { "appendAttribution": false, "parse_mode": "Markdown" }
+      },
+      "_comment": "Set chatId to your own Telegram chat id, and attach a Telegram API credential (bot token) in the n8n UI."
+    },
+    {
+      "id": "cf91629b-ba90-4862-baa9-61322a5a7fdb",
+      "name": "ניסוח מייל",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1660, 440],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\nconst games = $input.all().map(i => i.json);\nconst now = new Date();\nconst MS_DAY = 86400000;\nconst WAZE = 'https://waze.com/ul?ll=31.7698,35.1934&navigate=yes';\nconst pad = (n) => String(n).padStart(2, '0');\nfunction weatherAt(dateStr, timeStr) {\n  try {\n    const w = (($('מזג אוויר').first() || {}).json) || {};\n    const h = w.hourly; if (!h || !h.time) return null;\n    const [D, M, Y] = dateStr.split('.').map(Number);\n    const key = (2000 + Y) + '-' + pad(M) + '-' + pad(D) + 'T' + pad(parseInt(timeStr, 10)) + ':00';\n    const idx = h.time.indexOf(key);\n    if (idx < 0) return null;\n    return { t: Math.round(h.temperature_2m[idx]), rain: h.precipitation_probability[idx] };\n  } catch (e) { return null; }\n}\nif (!games.length) {\n  return [{ json: { html: '<!DOCTYPE html><html><body style=\"direction:rtl;padding:24px;font-family:Arial;text-align:center;\">🟢 אין משחקים קרובים באצטדיון טדי. הדרך פנויה 🚗</body></html>' } }];\n}\nfunction card(g) {\n  const dd = Math.ceil((g.kickoffTimestamp - now) / MS_DAY);\n  const cd = dd <= 0 ? 'היום' : dd === 1 ? 'מחר' : 'בעוד ' + dd + ' ימים';\n  const icon = g.level === 'red' ? '🔴' : g.level === 'yellow' ? '🟠' : '🟢';\n  const txt = g.level === 'red' ? 'קרוב מאוד — עומס צפוי' : g.level === 'yellow' ? 'מתקרב — כדאי לתכנן' : 'רחוק — לידיעה';\n  const bc = g.level === 'red' ? '#DC2626' : g.level === 'yellow' ? '#D97706' : '#16A34A';\n  const w = weatherAt(g.date, g.time);\n  const wHtml = w ? '<span style=\"color:#6B7280;\">🌡️ ' + w.t + '°' + (w.rain != null ? '  ·  🌧️ ' + w.rain + '%' + (w.rain >= 50 ? ' (קח מטרייה)' : '') : '') + '</span>' : '';\n  let plan;\n  if (g.mode === 'car') {\n    plan = '<div style=\"margin-top:12px;background:#FEF3F2;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.9;\">'\n      + '🚆 <strong>אין רכבת</strong> (' + (g.noTrainReason || 'סופ״ש') + ') — רכבת ישראל לא פעילה'\n      + '<br>🚗 סע ברכב — צא <strong>עד ' + g.leaveBy + '</strong>'\n      + '</div>';\n  } else {\n    plan = '<div style=\"margin-top:12px;background:#F3F4F6;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.9;\">'\n      + '🚂 <strong>תפוס רכבת ' + g.trainTime + '</strong> מתל אביב'\n      + '<br>🕘 הגעה משוערת לטדי: <strong>' + g.arrivalTeddyTime + '</strong>'\n      + '<br>💼 יציאה מהעבודה: <strong>' + g.leaveWorkTime + '</strong>'\n      + '</div>';\n  }\n  return '<div style=\"background:white;border-radius:12px;border-right:5px solid ' + bc + ';border-top:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;border-left:1px solid #E5E7EB;padding:18px;margin-bottom:16px;direction:rtl;text-align:right;\">'\n    + '<div style=\"font-size:13px;font-weight:bold;color:' + bc + ';\">' + icon + ' ' + txt + ' · ' + g.eventName + '</div>'\n    + '<div style=\"font-size:20px;font-weight:bold;margin-top:6px;\">' + g.hostTeam + ' נגד ' + g.opponent + '</div>'\n    + '<p style=\"font-size:14px;color:#374151;line-height:1.8;margin:8px 0 0;\">📅 <strong>' + g.dayName + ', ' + g.date + '</strong><br>🕒 שעה: <strong>' + g.time + '</strong><br>⏳ ' + cd + (wHtml ? '<br>' + wHtml : '') + '</p>'\n    + plan\n    + '<div style=\"margin-top:12px;\"><a href=\"' + WAZE + '\" style=\"color:#2563EB;text-decoration:none;font-size:14px;\">🗺️ פתח ניווט לטדי ב-Waze</a></div>'\n    + '<p style=\"font-size:12px;color:#9CA3AF;margin:10px 0 0;\">📍 אצטדיון טדי קולק, ירושלים</p></div>';\n}\nconst html = '<!DOCTYPE html><html lang=\"he\"><head><meta charset=\"UTF-8\"><title>התראות טדי</title></head>'\n  + '<body style=\"margin:0;padding:0;background:#F6F7F9;font-family:Arial,sans-serif;\">'\n  + '<div style=\"padding:32px 0;\"><div style=\"max-width:600px;margin:auto;background:white;border-radius:16px;padding:24px;border:1px solid #E5E7EB;direction:rtl;text-align:right;\">'\n  + '<h1 style=\"margin:0;text-align:center;font-size:26px;\">🏟️ התראות תנועה — אצטדיון טדי</h1>'\n  + '<p style=\"margin:8px 0 20px;text-align:center;font-size:13px;color:#4B5563;\">כל האירועים הקרובים בטדי · מתי לתפוס רכבת ומתי לצאת מהעבודה</p>'\n  + games.map(card).join('')\n  + '<p style=\"margin-top:14px;text-align:center;font-size:12px;color:#9CA3AF;\">🟢 רחוק · 🟠 מתקרב · 🔴 קרוב מאוד</p>'\n  + '</div></div></body></html>';\nreturn [{ json: { html } }];\n"
+      }
+    },
+    {
+      "id": "90bd5f2e-a7a8-4a82-888c-837f6dac317d",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [1880, 440],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "your-email@example.com",
+        "subject": "=🏟️ התראות טדי — {{ $now.format(\"dd/MM/yyyy\") }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": { "appendAttribution": false }
+      },
+      "_comment": "Set sendTo to your own email, and attach a Gmail OAuth2 credential in the n8n UI."
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [[{ "node": "Hebcal חגים", "type": "main", "index": 0 }]] },
+    "Hebcal חגים": { "main": [[{ "node": "שער שבת/חג", "type": "main", "index": 0 }]] },
+    "שער שבת/חג": { "main": [[{ "node": "מזג אוויר", "type": "main", "index": 0 }]] },
+    "מזג אוויר": { "main": [[{ "node": "sport5 ביתר", "type": "main", "index": 0 }, { "node": "sport5 הפועל ירושלים", "type": "main", "index": 0 }, { "node": "API-Football טדי", "type": "main", "index": 0 }]] },
+    "sport5 ביתר": { "main": [[{ "node": "מיזוג מקורות", "type": "main", "index": 0 }]] },
+    "sport5 הפועל ירושלים": { "main": [[{ "node": "מיזוג מקורות", "type": "main", "index": 1 }]] },
+    "API-Football טדי": { "main": [[{ "node": "מיזוג מקורות", "type": "main", "index": 2 }]] },
+    "מיזוג מקורות": { "main": [[{ "node": "חילוץ משחקי טדי", "type": "main", "index": 0 }]] },
+    "חילוץ משחקי טדי": { "main": [[{ "node": "חישוב משחקים עתידיים", "type": "main", "index": 0 }]] },
+    "חישוב משחקים עתידיים": { "main": [[{ "node": "נוסח הודעה", "type": "main", "index": 0 }, { "node": "ניסוח מייל", "type": "main", "index": 0 }]] },
+    "נוסח הודעה": { "main": [[{ "node": "Send a text message", "type": "main", "index": 0 }]] },
+    "ניסוח מייל": { "main": [[{ "node": "Send a message", "type": "main", "index": 0 }]] }
+  }
+}
